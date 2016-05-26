@@ -1,5 +1,6 @@
 # coding: utf-8
-from flask import Flask, send_from_directory, request, redirect, render_template, session, make_response, url_for, flash
+from flask import Flask, send_from_directory, request, redirect, \
+    render_template, session, make_response, url_for, flash
 import random
 import math
 import os
@@ -38,6 +39,11 @@ initobj = init.Init()
 
 # 必須先將 download_dir 設為 static_folder, 然後才可以用於 download 方法中的 app.static_folder 的呼叫
 app = Flask(__name__)
+
+# 設置隨後要在 blueprint 應用程式中引用的 global 變數
+app.config['data_dir'] = data_dir
+app.config['static_dir'] = static_dir
+app.config['download_dir'] = download_dir
 
 # Instantiate Authomatic.
 authomatic = Authomatic(CONFIG, 'A0Zr9@8j/3yX R~XHH!jmN]LWX/,?R@T', report_errors=False)

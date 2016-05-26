@@ -1,9 +1,14 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, current_app, \
+    send_from_directory, session, redirect, url_for
+import os
 
 # 這裡設定的 template_folder 為 template 搜尋目錄, 表示位於 user/g1/templates 目錄中
 # 但是若 wcmw14/templates 目錄中有相同名稱的 template file, 則優先取外部的檔案
 # 這樣的設計希望可以在統整各藍圖時, 可以隨時根據需要改寫 template 配置
 g1app = Blueprint('g1', __name__, url_prefix='/g1', template_folder='templates')
+
+
+
 
 @g1app.route('/')
 def helloworld():
@@ -175,3 +180,27 @@ spur(cx+pr1+pr2+pr2+pr3, cy, m, n3, pa, 180-180/n3+(180-180/n2)*n2/n3)
     return outstring
     # 若 template 檔案名稱與位於外部 templates 目錄中的檔案同名, 則取外部的 template
    # return render_template('g1index.html', user=user)
+@g1app.route('/listfiles')
+def listfiles():
+    # 先檢查使用者是否處於登入狀態, 若尚未登入則跳轉到登入畫面
+    if not session.get('login_email'):
+        #abort(401)
+        return redirect(url_for('login'))
+    # 利用導入 flask 的 current_app 取得在主應用程式中所設置的 config 變數
+    download_dir = current_app.config.get('download_dir')
+    files = os.listdir(download_dir)
+    file_string = "<a href='/index'>Home</a><br /><br />"
+    if len(files) == 0:
+        return file_string + "no file!"
+    for filename in files:
+        file_string += "<a href='/g1/get/"+filename+"'>"+filename+" <br />"
+    return file_string
+@g1app.route('/get/<filename>')
+def get(filename):
+    # 先檢查使用者是否處於登入狀態, 若尚未登入則跳轉到登入畫面
+    if not session.get('login_email'):
+        #abort(401)
+        return redirect(url_for('login'))
+    # 利用導入 flask 的 current_app 取得在主應用程式中所設置的 config 變數
+    download_dir = current_app.config.get('download_dir')
+    return send_from_directory(download_dir, filename)

@@ -23,6 +23,8 @@
 <v t="amd.20160525110421.1"><vh>&lt;&lt;declarations&gt;&gt;</vh></v>
 <v t="amd.20160525110421.3"><vh>helloworld</vh></v>
 <v t="leo.20160526093050.1"><vh>threegear</vh></v>
+<v t="amd.20160526212354.1"><vh>listfiles</vh></v>
+<v t="amd.20160526224212.1"><vh>getfiles</vh></v>
 </v>
 <v t="amd.20160525155305.1" a="E"><vh>進入 users/g1/templates</vh>
 <v t="amd.20160525155325.1" a="E"><vh>@path templates</vh>
@@ -135,7 +137,8 @@ if __name__ == "__main__":
 
 </t>
 <t tx="amd.20160525104320.1"># coding: utf-8
-from flask import Flask, send_from_directory, request, redirect, render_template, session, make_response, url_for, flash
+from flask import Flask, send_from_directory, request, redirect, \
+    render_template, session, make_response, url_for, flash
 import random
 import math
 import os
@@ -174,6 +177,11 @@ initobj = init.Init()
 
 # 必須先將 download_dir 設為 static_folder, 然後才可以用於 download 方法中的 app.static_folder 的呼叫
 app = Flask(__name__)
+
+# 設置隨後要在 blueprint 應用程式中引用的 global 變數
+app.config['data_dir'] = data_dir
+app.config['static_dir'] = static_dir
+app.config['download_dir'] = download_dir
 
 # Instantiate Authomatic.
 authomatic = Authomatic(CONFIG, 'A0Zr9@8j/3yX R~XHH!jmN]LWX/,?R@T', report_errors=False)
@@ -566,12 +574,17 @@ CONFIG = {
 @others
 </t>
 <t tx="amd.20160525105640.1">app.register_blueprint(users.g1.user1.g1app)</t>
-<t tx="amd.20160525110421.1">from flask import Blueprint, render_template
+<t tx="amd.20160525110421.1">from flask import Blueprint, render_template, current_app, \
+    send_from_directory, session, redirect, url_for
+import os
 
 # 這裡設定的 template_folder 為 template 搜尋目錄, 表示位於 user/g1/templates 目錄中
 # 但是若 wcmw14/templates 目錄中有相同名稱的 template file, 則優先取外部的檔案
 # 這樣的設計希望可以在統整各藍圖時, 可以隨時根據需要改寫 template 配置
 g1app = Blueprint('g1', __name__, url_prefix='/g1', template_folder='templates')
+
+
+
 
 </t>
 <t tx="amd.20160525110421.3">@g1app.route('/')
@@ -756,6 +769,30 @@ wjj5f_N4UxLZ83L3m1XkMB60</t>
 <t tx="amd.20160525155325.1"></t>
 <t tx="amd.20160525160129.1"></t>
 <t tx="amd.20160525162713.1">希望用 hashed_password = hashlib.sha512(password.encode('utf-8')).hexdigest() 轉換後寫入 hashed 內容</t>
+<t tx="amd.20160526212354.1">@g1app.route('/listfiles')
+def listfiles():
+    # 先檢查使用者是否處於登入狀態, 若尚未登入則跳轉到登入畫面
+    if not session.get('login_email'):
+        #abort(401)
+        return redirect(url_for('login'))
+    # 利用導入 flask 的 current_app 取得在主應用程式中所設置的 config 變數
+    download_dir = current_app.config.get('download_dir')
+    files = os.listdir(download_dir)
+    file_string = "&lt;a href='/index'&gt;Home&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;"
+    if len(files) == 0:
+        return file_string + "no file!"
+    for filename in files:
+        file_string += "&lt;a href='/g1/get/"+filename+"'&gt;"+filename+" &lt;br /&gt;"
+    return file_string</t>
+<t tx="amd.20160526224212.1">@g1app.route('/get/&lt;filename&gt;')
+def get(filename):
+    # 先檢查使用者是否處於登入狀態, 若尚未登入則跳轉到登入畫面
+    if not session.get('login_email'):
+        #abort(401)
+        return redirect(url_for('login'))
+    # 利用導入 flask 的 current_app 取得在主應用程式中所設置的 config 變數
+    download_dir = current_app.config.get('download_dir')
+    return send_from_directory(download_dir, filename)</t>
 <t tx="leo.20160526093050.1">@g1app.route('/threegear', defaults={'n1':15,'n2':20,'n3':18})
 @g1app.route('/threegear/&lt;n1&gt;/&lt;n2&gt;/&lt;n3&gt;')
 def threegear(n1, n2, n3):
