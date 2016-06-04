@@ -25,6 +25,7 @@
 <v t="leo.20160526093050.1"><vh>threegear</vh></v>
 <v t="amd.20160526212354.1"><vh>listfiles</vh></v>
 <v t="amd.20160526224212.1"><vh>getfiles</vh></v>
+<v t="leo.20160604101714.1"><vh>showstl</vh></v>
 </v>
 <v t="amd.20160525155305.1" a="E"><vh>進入 users/g1/templates</vh>
 <v t="amd.20160525155325.1" a="E"><vh>@path templates</vh>
@@ -782,7 +783,13 @@ def listfiles():
     if len(files) == 0:
         return file_string + "no file!"
     for filename in files:
-        file_string += "&lt;a href='/g1/get/"+filename+"'&gt;"+filename+" &lt;br /&gt;"
+        # 這裡要增加檔案副檔名的判斷, 若為 .stl, 則啟動 stl 檢視
+        #/static/viewstl.html?src=/g1/get/spur_25.stl
+        fileName, fileExtension = os.path.splitext(filename)
+        if fileExtension == ".stl":
+            file_string += "&lt;a href='/g1/get/"+filename+"'&gt;"+filename+"&lt;/a&gt; (&lt;a href='/static/viewstl.html?src=/g1/get/"+str(filename)+"'&gt;show "+str(filename)+"&lt;/a&gt;)&lt;br /&gt;"
+        else:
+            file_string += "&lt;a href='/g1/get/"+filename+"'&gt;"+filename+"&lt;/a&gt; &lt;br /&gt;"
     return file_string</t>
 <t tx="amd.20160526224212.1">@g1app.route('/get/&lt;filename&gt;')
 def get(filename):
@@ -959,5 +966,139 @@ spur(cx+pr1+pr2+pr2+pr3, cy, m, n3, pa, 180-180/n3+(180-180/n2)*n2/n3)
     # 若 template 檔案名稱與位於外部 templates 目錄中的檔案同名, 則取外部的 template
    # return render_template('g1index.html', user=user)</t>
 <t tx="leo.20160526094148.1"></t>
+<t tx="leo.20160604101714.1">@g1app.route('/showstl/&lt;filename&gt;')
+def showstl(filename):
+    outstring = '''
+
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+&lt;meta charset="UTF-8"&gt;
+&lt;title&gt;STL VIEWER ON BROWSER&lt;/title&gt;
+&lt;script type="text/javascript" src="jsc3d.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+&lt;h1&gt;STL VIEWER&lt;/h1&gt;
+&lt;/div&gt;
+&lt;div style="width:800px; margin:auto; position:relative; font-size: 9pt; color: #777777;"&gt;
+    &lt;canvas id="cv" style="border: 1px solid;" width="800" height="600" &gt;&lt;/canvas&gt;
+    &lt;div id="tip" style="display:block; color:#000000; padding:5px; position:absolute; left:10px; top:550px; background-color:#c0c0c0; height:32px; width:250px; border-radius:5px; border:1px solid #000000; font-family:Arial,sans-serif; opacity:0.5;"&gt; 
+        Drag mouse to rotate &lt;br&gt; Drag mouse with shift pressed to zoom
+    &lt;/div&gt;
+&lt;/div&gt;
+&lt;h2&gt;View Edit&lt;/h2&gt;
+&lt;div style="width:800px;margin-left:50px;height:70px;border: 1px solid;"&gt;
+    Model Color:&lt;input id="mdlClr" style="margin-right: 50px;" type="color" value="#00ff40" onchange="changeOption('ModelColor',this.value)"&gt;&lt;/input&gt;
+    Back Color1:&lt;input id="bckClr1" style="margin-right: 50px;" type="color" onchange="changeOption('BackgroundColor1',this.value)"&gt;&lt;/input&gt;
+    Back Color2:&lt;input id="bckClr2" type="color" onchange="changeOption('BackgroundColor2',this.value)"&gt;&lt;/input&gt;&lt;br /&gt;
+    Render Mode:
+    &lt;select id="render" style="margin-right: 50px;" onchange="changeOption('RenderMode',this.value)"&gt;
+        &lt;option&gt;Flat&lt;/option&gt;
+        &lt;option&gt;Point&lt;/option&gt;
+        &lt;option&gt;Wireframe&lt;/option&gt;
+        &lt;option&gt;Smooth&lt;/option&gt;
+    &lt;/select&gt;
+    Definition:
+    &lt;select id="defini" onchange="changeOption('Definition',this.value)"&gt;
+        &lt;option&gt;Standard&lt;/option&gt;
+        &lt;option&gt;low&lt;/option&gt;
+        &lt;option&gt;high&lt;/option&gt;
+    &lt;/select&gt;
+&lt;/div&gt;
+&lt;br /&gt;
+This web application do not support the InternetExplorer.
+
+&lt;script type="text/javascript"&gt;
+    var viewer3d;
+    function getOptions(){
+        var mc = document.getElementById("mdlClr").value;
+        var bc1 = document.getElementById("bckClr1").value;
+        var bc2 = document.getElementById("bckClr2").value;
+        var ren = document.getElementById("render").value;
+        var def = document.getElementById("defini").value;
+        return {ModelColor: mc,
+                BackgroundColor1: bc1,
+                BackgroundColor2: bc2,
+                RenderMode: ren,
+                Definition: def};
+    }
+    function readSTLfile(opt){
+        var canvas = document.getElementById('cv');
+        viewer3d = new JSC3D.Viewer(canvas);
+        viewer3d.setParameter('SceneUrl', opt.SceneUrl);
+        viewer3d.setParameter('InitRotationX', 0);
+        viewer3d.setParameter('InitRotationY', 0);
+        viewer3d.setParameter('InitRotationZ', 0);
+        viewer3d.setParameter('ModelColor', opt.ModelColor);
+        viewer3d.setParameter('BackgroundColor1', opt.BackgroundColor1);
+        viewer3d.setParameter('BackgroundColor2', opt.BackgroundColor2);
+        viewer3d.setParameter('RenderMode', opt.RenderMode);
+        viewer3d.setParameter('Definition', opt.Definition);
+        viewer3d.init();
+        viewer3d.update();
+    }
+    function changeOption(strOpt,strValue){
+    console.log("change " + strOpt + " to " + strValue);
+        viewer3d.setParameter(strOpt, strValue);
+        viewer3d.init();
+        viewer3d.update();
+    }
+    function openByUrl(){
+        var url = document.getElementById("url").value;
+        var opt = getOptions();
+        opt.SceneUrl = document.getElementById("url").value;
+        readSTLfile(opt);
+    }
+    function openByPass(){
+        var pass = document.getElementById("url").value;
+        var opt = getOptions();
+        var fs = document.getElementById("pass").files;
+        var f = fs[0];
+        var reader = new FileReader();
+        reader.onload = (function(theFile) {
+            return function(e) {            
+                opt.SceneUrl = e.target.result;
+                console.log(opt.SceneUrl);
+                readSTLfile(opt);
+            };
+        })(f);
+        reader.readAsDataURL(f);
+    }
+    function openByGet(){
+        var q = GetQueryString();
+        console.log(q);
+        var url = q.src;
+        var opt = getOptions();
+        opt.SceneUrl = url;
+        readSTLfile(opt);
+    }
+    function GetQueryString(){
+        if( 1 &lt; window.location.search.length )
+        {
+            var query = window.location.search.substring( 1 );
+            var parameters = query.split( '&amp;' );
+            var result = new Object();
+            for( var i = 0; i &lt; parameters.length; i++ )
+            {
+                var element = parameters[ i ].split( '=' );
+                var paramName = decodeURIComponent( element[ 0 ] );
+                var paramValue = decodeURIComponent( element[ 1 ] );
+                result[ paramName ] = decodeURIComponent( paramValue );
+            }
+            return result;
+        }
+        return null;
+    }
+    window.onload = function(){
+        openByGet();
+    }
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+'''
+    return outstring
+
+</t>
 </tnodes>
 </leo_file>
